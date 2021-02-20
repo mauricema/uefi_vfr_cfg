@@ -1,7 +1,5 @@
 @echo off
 
-rem  call   build -p PayloadPkg\PayloadPkg.dsc -a IA32 -t VS2017
-
 set SETUP_BSF=Build\Setup.bsf
 set SETUP_INC=Build\Setup.inc
 set SETUP_DSC=Build\Setup.dsc
@@ -25,5 +23,7 @@ python Tools\GenCfgData.py GENBIN %SETUP_YML% %SETUP_BIN%
 
 echo.
 
-rem python Tools\SblSetup.py %SETUP_JSN% %SETUP_BIN%
-rem python Tools\ConfigEditor.py
+echo Run following to run setup browser
+echo   python Tools\SblSetup.py %SETUP_JSN% %SETUP_BIN%
+echo   python Tools\ConfigEditor.py
+
