@@ -2315,6 +2315,9 @@ def main_loop (scr_win, cfg_win, pages):
             if ret == -2:
                 # move to next focus
                 next_focus = get_next_focus (widgets, curr_focus, 1)
+                if next_focus == curr_focus:
+                    # for last item, force it to kill focus
+                    widgets[curr_focus].set_focus (False)
 
             # widget changed its value, recheck condition
             if recheck_condition (widgets, pages):
