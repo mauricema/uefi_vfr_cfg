@@ -1,42 +1,26 @@
 # Python Setup Browser for UEFI VFR
 
-Demonstrate how to convert UEFI VFR setup into YAML format and browse on target or host.
+Demonstrate how to convert UEFI VFR setup into YAML format and browse setup options on target or host.
 
 # Steps:
-- Run edksetup.bat
+- Prepare required EDK2 build environment.
+  Please adjust the TOOLCHAIN parameter accordingly in mk.cmd if required.
 
-- Set PYTHON_HOME path to python3 dir path
+- Run "mk build" to generate HPK and combined VFR files.
 
-  set PYTHON_HOME=C:\Python3
+- Run "mk setup" to generate Setup YAML files
 
-- Rebuid EDK2 BaseTools
+- Run "mk run" to start setup browser GUI from host
 
-  cd BaseTools
+  ![Setup on target](Docs/SetupHost.JPG)
 
-  toolsetup.bat forcerebuild
+- Or run "mk mpy" to start setup browser TEXT terminal from host
 
-  cd ..
-
-- Generate HPK and combined VFR files through EDK2 build
-
-  build -p PayloadPkg\PayloadPkg.dsc -a IA32 -t VS2017
-
-- Generate Setup YAML files
-  mk.cmd
-
-- Run setup broswer:
-
-  On Target system, the setup browser can be launched through MicroPython environment.
-
-    python Tools\SblSetup.py Build\Setup.json Build\Setup.yaml
+  Please follow instructions in mk.cmd to setup connection with PuTTY or other tools supporting named pipe terminal.
 
   ![Setup on target](Docs/SetupTarget.JPG)
 
-  On Host system, the setup browser can be launched using stardard ConfigEditor GUI.
 
-   python Tools\ConfigEditor.py
-   then, load  Build\Setup.pkl file.
 
-  ![Setup on target](Docs/SetupHost.JPG)
 
 

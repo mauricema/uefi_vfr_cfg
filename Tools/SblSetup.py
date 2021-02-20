@@ -572,7 +572,7 @@ class Window:
           disp = disp [:-1] + ch
         self.write (disp)
 
-    def draw_list(self, rc, lines, select = 0, start = 0):
+    def draw_list(self, rc, lines, select = 0, start = 0, padding = ' '):
         nlen = len(lines)
         if start >= nlen:
             start = rc.h - nlen
@@ -581,10 +581,13 @@ class Window:
         if select   >= nlen:
             select   = nlen - 1
         curr = 0
-        fmt = ' %%-%ds ' % (rc.w - 2)
+        fmt = '%%-%ds ' % (rc.w - 1)
         for line in lines[start:]:
             self.set_pos(rc.x, rc.y + curr)
-            text = fmt % line[:rc.w]
+            if len(line) < rc.w:
+                text = fmt % line
+            else:
+                text = fmt % (line[:rc.w - 2] + '~')
             if select == start + curr:
                 old_color = self.set_color (self.sel_fore_color, self.sel_back_color)
                 self.write (text)
@@ -942,6 +945,10 @@ class ListBox (BaseWidget):
         self.option_start = 0
         self.client_rc = Rect(self.rc)
         self.client_rc.inflate (-1)
+        self.left_padding = ' '
+
+    def set_padding(self, padding):
+        self.left_padding = padding
 
     def clear(self):
         self.options.clear()
@@ -1011,7 +1018,7 @@ class ListBox (BaseWidget):
             old_sel_color = self.window.set_sel_color (TERM.COLOR_FOCUS[0], TERM.COLOR_FOCUS[1])
         else:
             old_sel_color = self.window.set_sel_color (TERM.COLOR_TEXT[0], TERM.COLOR_TEXT[1])
-        self.window.draw_list (self.client_rc, self.options, self.get_select(), self.option_start)
+        self.window.draw_list (self.client_rc, self.options, self.get_select(), self.option_start, self.left_padding)
 
         count = len(self.options)
         if count > self.client_rc.h:
@@ -1689,7 +1696,16 @@ class Pages:
         self.page_tree = cfg_tree['_cfg_page']
         self.page_list = {}
         self.curr_page = ''
+        #self.show_page_id = True
+        self.show_page_id = False
         self.widget = None
+
+    def get_page_id_list (self, id = 'root'):
+        page_list = []
+        tree = self.find_page_id (id)
+        for each in tree[id]['child']:
+            page_list.append(next(iter(each)))
+        return page_list
 
     def get_page_list (self, id = 'root'):
         page_list = []
@@ -1697,10 +1713,14 @@ class Pages:
         for each in tree[id]['child']:
             page_id = next(iter(each))
             if len(each[page_id]['child']) > 0:
-                prefix = '+ '
+                prefix = '+'
             else:
-                prefix = '  '
-            page_list.append(prefix + page_id)
+                prefix = ' '
+            if self.show_page_id:
+                text = page_id
+            else:
+                text = each[page_id]['title']
+            page_list.append(prefix + text)
         return page_list
 
     def get_cfg_list (self, page_id = None):
@@ -1955,7 +1975,7 @@ def recheck_condition (visible_widgets, pages):
     if not pages.curr_page:
         return False
 
-    page_id = pages.get_widget().get_select_text()[2:]
+    page_id = pages.get_widget().get_select_text()[1:]
     page_cfg_list = pages.get_cfg_list(page_id)
     full_cfg_list = pages.get_cfg_list()
 
@@ -2142,6 +2162,7 @@ def main():
     # add pages
     title_rc = Rect(rc)
     title_rc.inflate (-1)
+    title_rc.w -= 1
     page_title = Label (scr, title_rc, 'page_title')
     page_title.set_text('/')
     page_title.set_color (TERM.COLOR_TEXT[0])
@@ -2151,6 +2172,7 @@ def main():
     pages = Pages(cfg_tree)
     rc.adjust (0, 1, 0, -1)
     page_tree = ListBox (scr, rc, 'page_tree')
+    page_tree.set_padding ('')
     pages.set_widget (page_tree)
     page_list = pages.get_page_list(page_id)
     pages.set_active_page (page_id)
@@ -2305,7 +2327,13 @@ def main_loop (scr_win, cfg_win, pages):
             if ret == 1 :
                 # enter child pages
                 # update the path at top
-                page_id   = page_tree.get_select_text()[2:]
+                if pages.show_page_id:
+                    page_id      = page_tree.get_select_text()[1:]
+                else:
+                    sel_idx      = page_tree.get_select()
+                    page_id_list = pages.get_page_id_list (pages.curr_page)
+                    page_id      = page_id_list[sel_idx]
+
                 page_list = pages.get_page_list(page_id)
                 if len(page_list) > 0:
                     select    = widgets[curr_focus].get_select()
@@ -2338,11 +2366,21 @@ def main_loop (scr_win, cfg_win, pages):
 
                 # select changed
                 text     = widgets[curr_focus].get_select_text ()
-                page_id  = text[2:]
-                page_txt = '/' if pages.curr_page == 'root' else '../' + pages.curr_page
-                text = pages.get_page_title (page_id)
-                if text:
-                    page_txt = page_txt + ' (%s)' % text
+
+                if not pages.show_page_id:
+                    sel_idx      = page_tree.get_select()
+                    page_id_list = pages.get_page_id_list (pages.curr_page)
+                    page_id      = page_id_list[sel_idx]
+                    page_txt     = '/' if pages.curr_page == 'root' else './' + pages.get_page_title(pages.curr_page)
+                else:
+                    page_id      = text[1:]
+                    page_txt     = '/' if pages.curr_page == 'root' else './' + pages.curr_page
+
+                    # update top node text
+                    text = pages.get_page_title (page_id)
+                    if text:
+                        page_txt = page_txt + ' (%s)' % text
+
                 page_title.set_text(page_txt)
                 rebuild_page = True
 

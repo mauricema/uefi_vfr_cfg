@@ -1,0 +1,23 @@
+## @file  TestPkg.dec
+# This Package provides all definitions, library classes and libraries instances.
+#
+# Copyright (c) 2021, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = TestPkg
+  PACKAGE_GUID                   = BADCCF2F-BEB0-498E-9FCD-0EDFC8FD6AA8
+  PACKAGE_VERSION                = 0.1
+
+[Includes]
+  Include
+
+[LibraryClasses]
+
+[Guids]
+  #
+  # GUID defined in package
+  #

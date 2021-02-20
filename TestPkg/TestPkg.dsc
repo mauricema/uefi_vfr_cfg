@@ -12,11 +12,11 @@
 #
 ################################################################################
 [Defines]
-  PLATFORM_NAME                       = PayloadPkg
+  PLATFORM_NAME                       = TestPkg
   PLATFORM_GUID                       = 5BCB969A-9151-45E0-BE14-048954BD2E8E
   PLATFORM_VERSION                    = 0.1
   DSC_SPECIFICATION                   = 0x00010005
-  OUTPUT_DIRECTORY                    = Build/PayloadPkg
+  OUTPUT_DIRECTORY                    = Build/TestPkg
   SUPPORTED_ARCHITECTURES             = IA32|X64
   BUILD_TARGETS                       = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER                    = DEFAULT
@@ -39,4 +39,4 @@
 
 
 [Components]
-  PayloadPkg/Setup/PlatformSetupDxe.inf
+  TestPkg/Setup/PlatformSetupDxe.inf
