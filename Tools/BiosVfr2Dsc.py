@@ -213,12 +213,8 @@ def build_pages (root, level = 0):
 
 
 def build_cfgs (root, level = 0):
-    global var_db
 
-    if root is None:
-        return
-
-    for form in root['child']:
+    def build_form_cfgs (form):
         child = 'FM%02d' % (form['id'])
         for cfg in form['cfgs']:
           print ('  # !BSF PAGE:{%s}' % child)
@@ -256,6 +252,16 @@ def build_cfgs (root, level = 0):
           print ('  gCfgData.%s  | * | 0x%02X | 0x%x' % (name, dlen, default))
 
 
+    global var_db
+
+    if root is None:
+        return
+
+    build_form_cfgs (root)
+
+    for form in root['child']:
+        build_form_cfgs (form)
+
         level += 1
         build_cfgs(form,  level)
         level -= 1
@@ -266,7 +272,6 @@ def build_root_pages (root, level = 0):
         build_pages (child)
 
     print ('\n\n\n')
-
     for idx, child in enumerate(root['child'][0]['child']):
         build_cfgs  (child)
 
