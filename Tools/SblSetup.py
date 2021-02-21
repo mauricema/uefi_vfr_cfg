@@ -21,7 +21,7 @@ except:
 
 class TERM:
     # bit0: GFX   bit1: TXT
-    SCREEN_MODE    = 3
+    SCREEN_MODE    = 2
     SCREEN_SIZE    = (100,  30)
     COLOR_WINDOW   = (7,  1)
     COLOR_TEXT     = (15, 8)
@@ -134,29 +134,25 @@ def get_ch_py ():
     if ch == b'\xe0':
         ch = msvcrt.getch()
         if ch == b'P':
-             ch = b'down'
+             ch = b'\x1b[B'
         elif ch == b'H':
-             ch = b'up'
+             ch = b'\x1b[A'
         elif ch == b'K':
-             ch = b'left'
+             ch = b'\x1b[D'
         elif ch == b'M':
-             ch = b'right'
+             ch = b'\x1b[C'
         elif ch == b'S':
-             ch = b'del'
+             ch = b'\x1b-'
         elif ch == b'G':
-             ch = b'home'
+             ch = b'\x1bh'
         elif ch == b'O':
-             ch = b'end'
+             ch = b'\x1bk'
         elif ch == b'I':
-             ch = b'pgup'
+             ch = b'\x1b?'
         elif ch == b'Q':
-             ch = b'pgdw'
-        elif ch == b'\x86':
-             ch = b'ctr+pgup'
-        elif ch == b'v':
-             ch = b'ctr+pgdw'
+             ch = b'\x1b/'
         else:
-             ch = b'unknown'
+             ch = b'\x00'
     return ch
 
 def get_char ():
@@ -250,6 +246,7 @@ class NamedPipeServer:
 class NamedPipeClient:
     def __init__(self):
         self.hpipe = None
+        self.keys  = bytearray()
         pipe_name  = "\\\\.\\pipe\\TermPipe"
         open_mode  = win32con.GENERIC_READ | win32con.GENERIC_WRITE
         try:
@@ -269,6 +266,15 @@ class NamedPipeClient:
 
     def send(self, data, col, mode):
         win32pipe.TransactNamedPipe(self.hpipe, data, 2, None)
+
+    def recv(self):
+        ch = get_ch_py()
+        if len(ch) > 0:
+            self.keys.extend (ch)
+        if len (self.keys) > 0:
+            return chr(self.keys.pop(0))
+        else:
+            return b'\x00'
 
     def close(self):
         if self.hpipe:
@@ -2425,6 +2431,7 @@ def main_loop (scr_win, cfg_win, pages):
 if is_mp():
     g_pipe = NamedPipeVirtual()
 else:
+    #TERM.SCREEN_MODE = 1
     if TERM.SCREEN_MODE & 2:
         TERM.SCREEN_MODE = 2
         g_pipe = NamedPipeServer()
