@@ -1922,7 +1922,7 @@ def format_str_to_value (value_str, bit_length, array = True):
     value_str = value_str.strip()
     if check_quote (value_str):
         value_str = value_str[1:-1]
-        bvalue = bytearray (value_str)
+        bvalue = bytearray (value_str.encode())
         if len(bvalue) == 0:
             bvalue = bytearray(b'\x00')
         if array:
@@ -2431,7 +2431,6 @@ def main_loop (scr_win, cfg_win, pages):
 if is_mp():
     g_pipe = NamedPipeVirtual()
 else:
-    #TERM.SCREEN_MODE = 1
     if TERM.SCREEN_MODE & 2:
         TERM.SCREEN_MODE = 2
         g_pipe = NamedPipeServer()
