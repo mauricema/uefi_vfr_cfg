@@ -62,7 +62,7 @@ def build_form (form_txt):
       if match:
         str_id = int(match.group(1), 0)
         form['title'] = '%s' % (str_db[str_id])
-      match = re.match ('goto\s*(\d+),', line)
+      match = re.match ('goto\s*(0x[0-9a-fA-F]+|\d+)\s*,', line)
       if match:
         form['link'].append (int(match.group(1), 0))
 
@@ -72,33 +72,34 @@ def build_form (form_txt):
         cfg = {'name' : match.group(2), 'prompt': '',  'help': '', 'options' : []}
         if opt_type == 'checkbox':
           cfg['options'] = [(0, 'Disable', '*'), (1, 'Enable', '')]
+
       if cfg:
         if 'CHECKBOX_DEFAULT' in line:
           cfg['options'] = [(0, 'Disable',  ''), (1, 'Enable', '*')]
-        match = re.match ('prompt\s*=\s*STRING_TOKEN\s*\(*(.+)\),', line)
-        if match:
-          cfg['prompt'] = str_db[int(match.group(1), 0)]
-        match = re.match ('help\s*=\s*STRING_TOKEN\s*\((.+)\),', line)
-        if match:
-          cfg['help'] = str_db[int(match.group(1), 0)]
-        match = re.match ('(minimum|maximum|step|default)\s*=\s*(.+),', line)
-        if match and opt_type == 'numeric':
-          if len(cfg['options']) == 0:
-            cfg['options'] = [0,0,0,0]
-          if match.group(1) == 'minimum':
-            idx = 0
-          elif match.group(1) == 'maximum':
-            idx = 1
-          elif match.group(1) == 'default':
-            idx = 2
-          else:
-            idx = 3
-          val = match.group(2)
-          if val.lower() == 'true':
-            val = '1'
-          if val.lower() == 'false':
-            val = '0'
-          cfg['options'][idx] = int(val, 0)
+
+        results = re.findall ('(prompt|help)\s*=\s*STRING_TOKEN\s*\(*(.+?)\),', line)
+        for each in results:
+          cfg[each[0]] = str_db[int(each[1], 0)]
+
+        if opt_type == 'numeric':
+          results = re.findall ('(minimum|maximum|step|default)\s*=\s*(.+?),', line)
+          for each in results:
+            if len(cfg['options']) == 0:
+              cfg['options'] = [0,0,0,0]
+            if each[0] == 'minimum':
+              idx = 0
+            elif each[0] == 'maximum':
+              idx = 1
+            elif each[0] == 'default':
+              idx = 2
+            else:
+              idx = 3
+            val = each[1]
+            if val.lower() == 'true':
+              val = '1'
+            if val.lower() == 'false':
+              val = '0'
+            cfg['options'][idx] = int(val, 0)
 
         match = re.match ('option\s*text\s*=\s*STRING_TOKEN\s*\((.+)\),\s*value\s*=\s*(.+),', line)
         if match:
@@ -129,7 +130,15 @@ def is_form_in_link (root, form_id):
 
 
 def build_root_link (root):
+    new_id       = 0xe000
+    root['link'] = []
     for each in root['child']:
+
+      if each['id'] in root['link']:
+        # need to rename the form ID
+        each['id'] = new_id
+        new_id    += 1
+
       if not is_form_in_link (root, each['id']):
         root['link'].append (each['id'])
 
@@ -176,8 +185,8 @@ def parse_form (inc_file):
         continue
 
       if line.startswith ('form formid'):
-        match = re.match ('form formid\s*=\s*(\d+)', line)
-        form_id = int(match.group(1))
+        match = re.match ('form formid\s*=\s*(0x[0-9a-fA-F]+|\d+)', line)
+        form_id = int(match.group(1), 0)
         level  += 1
         form_txt = ['%d' % form_id]
         continue
@@ -217,6 +226,8 @@ def build_cfgs (root, level = 0):
     def build_form_cfgs (form):
         child = 'FM%02d' % (form['id'])
         for cfg in form['cfgs']:
+          if len(cfg) == 0:
+            continue
           print ('  # !BSF PAGE:{%s}' % child)
           print ('  # !BSF NAME:{%s}' % cfg['prompt'])
           helps = cfg['help'].replace('\n', ' ')
@@ -267,12 +278,12 @@ def build_cfgs (root, level = 0):
         level -= 1
 
 def build_root_pages (root, level = 0):
-    for child in root['child'][0]['child']:
+    for child in root['child']:
         print ('  # !BSF PAGES:{FM%02d::"%s"}' % (child['id'], child['title']) )
         build_pages (child)
 
     print ('\n\n\n')
-    for idx, child in enumerate(root['child'][0]['child']):
+    for idx, child in enumerate(root['child']):
         build_cfgs  (child)
 
 def parse_vars (inc_file):
@@ -285,20 +296,37 @@ def parse_vars (inc_file):
         line = line.strip()
         if not line.endswith (';'):
             continue
-        match = re.match ('(CHAR|UINT)(8|16|32|64)\s+(\w+)(\s*\[\s*(\d+)\s*\])?', line)
-        if not match:
-            continue
 
-        if  match.group(5) is None:
+        match = re.match ('BOOLEAN\s+(\w+)\s*;', line)
+        if match:
             array_num = 1
-        else:
-            array_num = int (match.group(5))
+            item_size = 1
+            name = match.group(1)
 
-        item_size = int (match.group(2)) // 8
-        vars[match.group(3)] = (item_size, array_num)
+        else:
+            match = re.match ('(CHAR|UINT)(8|16|32|64)\s+(\w+)(\s*\[\s*(\d+)\s*\])?', line)
+            if not match:
+                continue
+
+            if  match.group(5) is None:
+                array_num = 1
+            else:
+                array_num = int (match.group(5))
+
+            item_size = int (match.group(2)) // 8
+            name = match.group(3)
+
+        vars[name] = (item_size, array_num)
 
     return vars
 
+def print_form (form, lvl = 0):
+    links = ','.join(['%04X' % i for i in form['link']])
+    print ('%s%04X: %s [%s]' % (' ' * lvl, form['id'], form['title'], links))
+    for each in form['child']:
+        lvl += 1
+        print_form (each, lvl)
+        lvl -= 1
 
 def usage():
     print ('\n'.join([
@@ -327,6 +355,7 @@ def main ():
             print ('%04X: %s' % (idx, i))
 
     form   = parse_form (vfr_file)
+    #print_form (form)
     root   = build_tree (form, form)
     build_root_pages (root)
 
